@@ -1,27 +1,34 @@
 from __future__ import print_function
-import tensorflow as tf
-import numpy as np
 
-import TensorflowUtils as utils
-import read_MITSceneParsingData as scene_parsing
+import os
 import datetime
-import BatchDatsetReader as dataset
+
+import numpy as np
+import tensorflow as tf
 from six.moves import xrange
 
+import TensorflowUtils as utils
+from src.data import BatchDatsetReader as dataset
+from src.data import read_MITSceneParsingData as scene_parsing
+
+PROJ_DIR = "/".join(os.path.abspath(__file__).strip().split("/")[:-2]) + "/"
+DATA_DIR = "/Volumes/projects/DataSets/ADEChallengeData2016/"
+
 FLAGS = tf.flags.FLAGS
-tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
-tf.flags.DEFINE_string("logs_dir", "logs/", "path to logs directory")
-tf.flags.DEFINE_string("data_dir", "Data_zoo/MIT_SceneParsing/", "path to dataset")
+tf.flags.DEFINE_integer("batch_size", "5", "batch size for training")
+tf.flags.DEFINE_string("logs_dir", PROJ_DIR + "logs/model_output/",
+                       "path to logs directory")
+tf.flags.DEFINE_string("data_dir", DATA_DIR, "path to dataset")
 tf.flags.DEFINE_float("learning_rate", "1e-4", "Learning rate for Adam Optimizer")
-tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
-tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
-tf.flags.DEFINE_string('mode', "train", "Mode train/ test/ visualize")
+tf.flags.DEFINE_string("model_dir", PROJ_DIR + "model_zoo/", "Path to vgg model mat")
+tf.flags.DEFINE_bool('debug', "True", "Debug mode: True/ False")
+tf.flags.DEFINE_string('mode', "visualize", "Mode train/ test/ visualize")
 
 MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
 
 MAX_ITERATION = int(1e5 + 1)
 NUM_OF_CLASSESS = 151
-IMAGE_SIZE = 224
+IMAGE_SIZE = 256
 
 
 def vgg_net(weights, image):
@@ -149,9 +156,11 @@ def main(argv=None):
     tf.summary.image("input_image", image, max_outputs=2)
     tf.summary.image("ground_truth", tf.cast(annotation, tf.uint8), max_outputs=2)
     tf.summary.image("pred_annotation", tf.cast(pred_annotation, tf.uint8), max_outputs=2)
-    loss = tf.reduce_mean((tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
-                                                                          labels=tf.squeeze(annotation, squeeze_dims=[3]),
-                                                                          name="entropy")))
+    loss = tf.reduce_mean(
+        (tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=logits,
+            labels=tf.squeeze(annotation, squeeze_dims=[3]),
+            name="entropy")))
     tf.summary.scalar("entropy", loss)
 
     trainable_var = tf.trainable_variables()
@@ -169,7 +178,10 @@ def main(argv=None):
     print(len(valid_records))
 
     print("Setting up dataset reader")
-    image_options = {'resize': True, 'resize_size': IMAGE_SIZE}
+    image_options = {
+        'resize': True,
+        'resize_size': IMAGE_SIZE
+    }
     if FLAGS.mode == 'train':
         train_dataset_reader = dataset.BatchDatset(train_records, image_options)
     validation_dataset_reader = dataset.BatchDatset(valid_records, image_options)
@@ -207,15 +219,19 @@ def main(argv=None):
 
     elif FLAGS.mode == "visualize":
         valid_images, valid_annotations = validation_dataset_reader.get_random_batch(FLAGS.batch_size)
-        pred = sess.run(pred_annotation, feed_dict={image: valid_images, annotation: valid_annotations,
-                                                    keep_probability: 1.0})
+        pred = sess.run(pred_annotation,
+                        feed_dict={
+                            image: valid_images,
+                            annotation: valid_annotations,
+                            keep_probability: 1.0
+                        })
         valid_annotations = np.squeeze(valid_annotations, axis=3)
         pred = np.squeeze(pred, axis=3)
 
         for itr in range(FLAGS.batch_size):
-            utils.save_image(valid_images[itr].astype(np.uint8), FLAGS.logs_dir, name="inp_" + str(5+itr))
-            utils.save_image(valid_annotations[itr].astype(np.uint8), FLAGS.logs_dir, name="gt_" + str(5+itr))
-            utils.save_image(pred[itr].astype(np.uint8), FLAGS.logs_dir, name="pred_" + str(5+itr))
+            utils.save_image(valid_images[itr].astype(np.uint8), FLAGS.logs_dir, name="inp_" + str(itr))
+            utils.save_image(valid_annotations[itr].astype(np.uint8), FLAGS.logs_dir, name="gt_" + str(itr))
+            utils.save_image(pred[itr].astype(np.uint8), FLAGS.logs_dir, name="pred_" + str(itr))
             print("Saved image: %d" % itr)
 
 
