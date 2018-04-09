@@ -1,17 +1,22 @@
+# Copyright (c) 2009 IW.
+# All rights reserved.
+#
+# Author: liuguiyang <liuguiyangnwpu@gmail.com>
+# Date:   2018/4/8
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import random
 from six.moves import cPickle as pickle
 from tensorflow.python.platform import gfile
 import glob
 
-import src.TensorflowUtils as utils
-
-# DATA_URL = 'http://sceneparsing.csail.mit.edu/data/ADEChallengeData2016.zip'
-DATA_URL = 'http://data.csail.mit.edu/places/ADEchallenge/ADEChallengeData2016.zip'
-
 
 def read_dataset(data_dir):
-    pickle_filename = "MITSceneParsing.pickle"
+    pickle_filename = "DUCForest.pickle"
     pickle_filepath = os.path.join(data_dir, pickle_filename)
     if not os.path.exists(pickle_filepath):
         result = create_image_lists(data_dir)
@@ -40,7 +45,7 @@ def create_image_lists(image_dir):
     for directory in directories:
         file_list = []
         image_list[directory] = []
-        file_glob = os.path.join(image_dir, "images", directory, '*.' + 'jpg')
+        file_glob = os.path.join(image_dir, "images", directory, '*.' + 'tif')
         file_list.extend(glob.glob(file_glob))
 
         if not file_list:
@@ -48,9 +53,14 @@ def create_image_lists(image_dir):
         else:
             for f in file_list:
                 filename = os.path.splitext(f.split("/")[-1])[0]
-                annotation_file = os.path.join(image_dir, "annotations", directory, filename + '.png')
+                annotation_file = os.path.join(image_dir, "annotations",
+                                               directory, filename + '.tif')
                 if os.path.exists(annotation_file):
-                    record = {'image': f, 'annotation': annotation_file, 'filename': filename}
+                    record = {
+                        'image': f,
+                        'annotation': annotation_file,
+                        'filename': filename
+                    }
                     image_list[directory].append(record)
                 else:
                     print("Annotation file not found for %s - Skipping" % filename)

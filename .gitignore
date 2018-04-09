@@ -5,3 +5,5 @@ Model_zoo/*
 *.pyc
 .DS_Store
 model_zoo/
+src/pred.pkl
+*.pkl

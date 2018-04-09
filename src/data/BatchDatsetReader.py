@@ -2,7 +2,7 @@
 Code ideas from https://github.com/Newmu/dcgan and tensorflow mnist dataset reader
 """
 import numpy as np
-import scipy.misc as misc
+import tifffile as tiff
 
 
 class BatchDatset:
@@ -28,9 +28,17 @@ class BatchDatset:
         print(image_options)
         self.files = records_list
         self.image_options = image_options
-        self._read_images()
+        self._read_images(image_options.get("is_TIFF", False))
 
-    def _read_images(self):
+    @property
+    def images(self):
+        return self.images
+    
+    @property
+    def annotations(self):
+        return self.annotations
+
+    def _read_images(self, is_TIFF=False):
         self.__channels = True
         self.images = np.array([self._transform(filename['image']) for filename in self.files])
         self.__channels = False
@@ -38,20 +46,12 @@ class BatchDatset:
             [np.expand_dims(self._transform(filename['annotation']), axis=3) for filename in self.files])
         print (self.images.shape)
         print (self.annotations.shape)
+        if is_TIFF:
+            self.images = self.images / 65536.0 * 255.0
 
     def _transform(self, filename):
-        image = misc.imread(filename)
-        if self.__channels and len(image.shape) < 3:  # make sure images are of shape(h,w,3)
-            image = np.array([image for i in range(3)])
-
-        if self.image_options.get("resize", False) and self.image_options["resize"]:
-            resize_size = int(self.image_options["resize_size"])
-            resize_image = misc.imresize(image,
-                                         [resize_size, resize_size], interp='nearest')
-        else:
-            resize_image = image
-
-        return np.array(resize_image)
+        image = tiff.imread(filename)
+        return np.array(image)
 
     def get_records(self):
         return self.images, self.annotations
